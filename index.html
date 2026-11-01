@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#060910">
+  <title>维度回廊 · Dimensional Cascade</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #060910;
+      --text: #edf2fb;
+      --muted: #8995aa;
+      --line: rgba(148, 163, 184, 0.14);
+      --panel: rgba(13, 19, 33, 0.78);
+      --mono: "Bahnschrift", "Cascadia Mono", "Consolas", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-width: 320px;
+      background: var(--bg);
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--text);
+      font-family: "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+      background:
+        radial-gradient(ellipse 75% 52% at 50% -12%, rgba(56, 189, 248, 0.17), transparent 68%),
+        radial-gradient(ellipse 46% 38% at 102% 18%, rgba(139, 92, 246, 0.13), transparent 72%),
+        radial-gradient(ellipse 42% 44% at -8% 82%, rgba(20, 184, 166, 0.08), transparent 72%),
+        var(--bg);
+    }
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+      opacity: 0.5;
+      background-image:
+        radial-gradient(1px 1px at 21% 32%, rgba(255, 255, 255, 0.7) 50%, transparent 52%),
+        radial-gradient(1px 1px at 67% 74%, rgba(186, 230, 253, 0.55) 50%, transparent 52%),
+        radial-gradient(1px 1px at 84% 18%, rgba(255, 255, 255, 0.45) 50%, transparent 52%),
+        radial-gradient(1px 1px at 43% 91%, rgba(255, 255, 255, 0.4) 50%, transparent 52%);
+      background-size: 420px 420px, 560px 560px, 330px 330px, 470px 470px;
+    }
+
+    body::after {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      content: "";
+      opacity: 0.16;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent 78%);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(1180px, calc(100% - 44px));
+      margin: 0 auto;
+      padding: 30px 0 34px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .brand-mark {
+      position: relative;
+      display: grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid rgba(125, 211, 252, 0.3);
+      border-radius: 12px;
+      background:
+        linear-gradient(135deg, rgba(56, 189, 248, 0.88), rgba(124, 58, 237, 0.76)),
+        #111a2c;
+      box-shadow: 0 0 28px rgba(56, 189, 248, 0.24);
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      content: "";
+      transform: rotate(45deg);
+      border: 1px solid rgba(8, 13, 24, 0.9);
+    }
+
+    .brand-mark::after {
+      width: 5px;
+      height: 5px;
+      background: #06101d;
+      border: 0;
+    }
+
+    .brand-copy h1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 650;
+      letter-spacing: 0.12em;
+      line-height: 1.25;
+    }
+
+    .brand-copy p {
+      margin: 4px 0 0;
+      color: #6f7d94;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.28em;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .save-state {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: #708098;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .save-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 9px rgba(52, 211, 153, 0.75);
+    }
+
+    .save-state.is-error .save-dot {
+      background: #fb7185;
+      box-shadow: 0 0 9px rgba(251, 113, 133, 0.65);
+    }
+
+    .reset-button {
+      padding: 9px 13px;
+      color: #9cabc0;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: rgba(15, 23, 40, 0.6);
+      transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .reset-button:hover {
+      color: #fecdd3;
+      border-color: rgba(251, 113, 133, 0.35);
+      background: rgba(251, 113, 133, 0.08);
+    }
+
+    .hero {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 36px;
+      min-height: 238px;
+      padding: 34px 38px;
+      overflow: hidden;
+      border: 1px solid rgba(125, 211, 252, 0.17);
+      border-radius: 26px;
+      background:
+        linear-gradient(125deg, rgba(18, 28, 49, 0.92), rgba(9, 14, 26, 0.76)),
+        var(--panel);
+      box-shadow:
+        0 28px 90px rgba(0, 0, 0, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    }
+
+    .hero::before {
+      position: absolute;
+      top: -150px;
+      left: 6%;
+      width: 500px;
+      height: 360px;
+      content: "";
+      background: radial-gradient(ellipse, rgba(56, 189, 248, 0.16), transparent 66%);
+      pointer-events: none;
+    }
+
+    .hero::after {
+      position: absolute;
+      right: -130px;
+      bottom: -210px;
+      width: 480px;
+      height: 420px;
+      content: "";
+      background: radial-gradient(ellipse, rgba(124, 58, 237, 0.16), transparent 68%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 12px;
+      color: #7fd5f7;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.19em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow-mark {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      transform: rotate(45deg);
+      background: currentColor;
+      box-shadow: 0 0 10px currentColor;
+    }
+
+    .points-row {
+      display: flex;
+      align-items: baseline;
+      gap: 15px;
+      min-width: 0;
+    }
+
+    .points {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      color: #f3f8ff;
+      font-family: var(--mono);
+      font-size: clamp(38px, 6.4vw, 76px);
+      font-weight: 600;
+      letter-spacing: -0.06em;
+      line-height: 1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-shadow: 0 0 36px rgba(125, 211, 252, 0.22);
+    }
+
+    .points-unit {
+      flex: none;
+      color: #9eacc1;
+      font-size: 14px;
+      letter-spacing: 0.12em;
+    }
+
+    .hero-stats {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 17px;
+      color: #8492a8;
+      font-size: 11px;
+    }
+
+    .live-stat {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    .live-stat > i {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #5eead4;
+      box-shadow: 0 0 10px rgba(94, 234, 212, 0.8);
+      animation: breathe 2.6s ease-in-out infinite;
+    }
+
+    .live-stat strong {
+      color: #b9f5e9;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 13px;
+      background: rgba(148, 163, 184, 0.18);
+    }
+
+    .stat-divider + .live-stat strong {
+      color: #c6d3e5;
+    }
+
+    .hint {
+      min-height: 18px;
+      margin: 18px 0 0;
+      color: #7d8ba1;
+      font-size: 11px;
+      line-height: 1.7;
+    }
+
+    .hint::before {
+      margin-right: 7px;
+      color: #4b5a70;
+      content: "›";
+    }
+
+    .chain {
+      position: relative;
+      z-index: 1;
+      flex: 0 0 auto;
+      width: 326px;
+      padding: 3px 0 3px 32px;
+      border-left: 1px solid rgba(148, 163, 184, 0.13);
+    }
+
+    .chain-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 15px;
+      color: #a8b6c9;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+    }
+
+    .chain-sub {
+      color: #5b6980;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.04em;
+    }
+
+    .chain-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .chain-node {
+      --node-color: #7dd3fc;
+      --node-rgb: 125, 211, 252;
+      display: grid;
+      width: 42px;
+      height: 42px;
+      flex: none;
+      place-items: center;
+      color: #526176;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.05em;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 12px;
+      background: rgba(8, 13, 24, 0.46);
+      transition: color 260ms ease, border-color 260ms ease, background 260ms ease, box-shadow 260ms ease;
+    }
+
+    .chain-node.tier-1 { --node-color: #5eead4; --node-rgb: 94, 234, 212; }
+    .chain-node.tier-2 { --node-color: #60a5fa; --node-rgb: 96, 165, 250; }
+    .chain-node.tier-3 { --node-color: #c084fc; --node-rgb: 192, 132, 252; }
+    .chain-node.tier-4 { --node-color: #fbbf24; --node-rgb: 251, 191, 36; }
+
+    .chain-node.is-active {
+      color: var(--node-color);
+      border-color: rgba(var(--node-rgb), 0.44);
+      background: rgba(var(--node-rgb), 0.09);
+      box-shadow: 0 0 18px rgba(var(--node-rgb), 0.1);
+    }
+
+    .chain-node.base {
+      width: auto;
+      min-width: 54px;
+      padding: 0 11px;
+      color: #7dd3fc;
+      border-color: rgba(125, 211, 252, 0.32);
+      background: rgba(125, 211, 252, 0.08);
+    }
+
+    .chain-arrow {
+      color: #3c4960;
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .chain-note {
+      margin: 14px 0 0;
+      color: #637188;
+      font-size: 10px;
+      line-height: 1.65;
+    }
+
+    .tower {
+      margin-top: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 14px;
+      padding: 0 3px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+
+    .section-head p {
+      margin: 6px 0 0;
+      color: #68778e;
+      font-size: 10px;
+    }
+
+    .price-rule {
+      flex: none;
+      padding-bottom: 1px;
+      color: #53627a;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.04em;
+    }
+
+    .tier-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .tier-card {
+      --tier-color: #5eead4;
+      --tier-rgb: 94, 234, 212;
+      position: relative;
+      display: flex;
+      min-height: 276px;
+      flex-direction: column;
+      padding: 19px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.13);
+      border-radius: 19px;
+      background:
+        linear-gradient(168deg, rgba(20, 29, 49, 0.84), rgba(8, 13, 24, 0.92)),
+        var(--panel);
+      box-shadow:
+        0 18px 44px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+    }
+
+    .tier-card::before {
+      position: absolute;
+      top: -96px;
+      left: -54px;
+      width: 220px;
+      height: 190px;
+      content: "";
+      pointer-events: none;
+      background: radial-gradient(ellipse, rgba(var(--tier-rgb), 0.14), transparent 68%);
+    }
+
+    .tier-card::after {
+      position: absolute;
+      top: 0;
+      right: 22px;
+      left: 22px;
+      height: 1px;
+      content: "";
+      background: linear-gradient(90deg, transparent, rgba(var(--tier-rgb), 0.55), transparent);
+      opacity: 0.7;
+    }
+
+    .tier-card.tier-1 { --tier-color: #5eead4; --tier-rgb: 94, 234, 212; }
+    .tier-card.tier-2 { --tier-color: #60a5fa; --tier-rgb: 96, 165, 250; }
+    .tier-card.tier-3 { --tier-color: #c084fc; --tier-rgb: 192, 132, 252; }
+    .tier-card.tier-4 { --tier-color: #fbbf24; --tier-rgb: 251, 191, 36; }
+
+    .tier-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(var(--tier-rgb), 0.28);
+      box-shadow:
+        0 23px 50px rgba(0, 0, 0, 0.29),
+        0 0 28px rgba(var(--tier-rgb), 0.055),
+        inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    }
+
+    .tier-card.bought {
+      animation: bought 520ms ease-out;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 17px;
+    }
+
+    .card-kicker {
+      color: rgba(var(--tier-rgb), 0.72);
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.16em;
+    }
+
+    .owned-badge {
+      padding: 3px 7px;
+      color: #718097;
+      font-family: var(--mono);
+      font-size: 9px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 6px;
+      background: rgba(5, 9, 17, 0.32);
+    }
+
+    .tier-card h3 {
+      margin: 0;
+      color: #dfe8f5;
+      font-size: 13px;
+      font-weight: 550;
+      letter-spacing: 0.08em;
+    }
+
+    .amount-row {
+      display: flex;
+      align-items: baseline;
+      gap: 7px;
+      min-width: 0;
+      margin-top: 9px;
+    }
+
+    .amount {
+      display: block;
+      overflow: hidden;
+      color: var(--tier-color);
+      font-family: var(--mono);
+      font-size: 33px;
+      font-weight: 500;
+      letter-spacing: -0.035em;
+      line-height: 1.16;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-shadow: 0 0 22px rgba(var(--tier-rgb), 0.16);
+    }
+
+    .amount-label {
+      flex: none;
+      color: #5e6c82;
+      font-size: 9px;
+    }
+
+    .output-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 0;
+      margin-top: 12px;
+      padding-top: 12px;
+      color: #718096;
+      font-size: 10px;
+      border-top: 1px solid rgba(148, 163, 184, 0.09);
+    }
+
+    .output-main {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .output-arrow {
+      color: rgba(var(--tier-rgb), 0.65);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .output-row strong {
+      color: #b6c4d7;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .multiplier {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex: none;
+      padding: 4px 6px;
+      color: var(--tier-color);
+      font-family: var(--mono);
+      font-size: 9px;
+      border: 1px solid rgba(var(--tier-rgb), 0.2);
+      border-radius: 6px;
+      background: rgba(var(--tier-rgb), 0.055);
+    }
+
+    .multiplier-label {
+      color: #607087;
+      font-family: "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      font-size: 8px;
+    }
+
+    .multiplier-value {
+      white-space: nowrap;
+    }
+
+    .buy-button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      margin-top: auto;
+      padding: 11px 12px;
+      color: #e9f1fa;
+      font-size: 11px;
+      font-weight: 550;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      border: 1px solid rgba(var(--tier-rgb), 0.32);
+      border-radius: 10px;
+      background:
+        linear-gradient(120deg, rgba(var(--tier-rgb), 0.16), rgba(var(--tier-rgb), 0.045)),
+        rgba(8, 13, 24, 0.66);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      transition: transform 130ms ease, border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+    }
+
+    .buy-button:hover:not(:disabled) {
+      border-color: rgba(var(--tier-rgb), 0.6);
+      background:
+        linear-gradient(120deg, rgba(var(--tier-rgb), 0.25), rgba(var(--tier-rgb), 0.075)),
+        rgba(8, 13, 24, 0.66);
+    }
+
+    .buy-button:active:not(:disabled) {
+      transform: translateY(1px) scale(0.995);
+    }
+
+    .buy-button:disabled {
+      color: #59677c;
+      cursor: not-allowed;
+      border-color: rgba(148, 163, 184, 0.1);
+      background: rgba(8, 13, 24, 0.43);
+      opacity: 0.8;
+    }
+
+    .buy-price {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--tier-color);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .buy-button:disabled .buy-price {
+      color: #68758a;
+    }
+
+    .diamond {
+      font-size: 8px;
+      opacity: 0.8;
+    }
+
+    .price-note {
+      margin: 8px 0 0;
+      color: #4d5b71;
+      font-family: var(--mono);
+      font-size: 8px;
+      letter-spacing: 0.03em;
+      text-align: center;
+    }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 26px;
+      color: #4f5d72;
+      font-size: 9px;
+      letter-spacing: 0.04em;
+    }
+
+    .footer-dot {
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      background: #4a586c;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.45; transform: scale(0.82); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes bought {
+      0% {
+        border-color: rgba(var(--tier-rgb), 0.85);
+        box-shadow: 0 0 0 0 rgba(var(--tier-rgb), 0.34), 0 18px 44px rgba(0, 0, 0, 0.2);
+      }
+      100% {
+        border-color: rgba(148, 163, 184, 0.13);
+        box-shadow: 0 0 0 17px rgba(var(--tier-rgb), 0), 0 18px 44px rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    @media (max-width: 1020px) {
+      .chain {
+        width: 290px;
+        padding-left: 25px;
+      }
+
+      .chain-node {
+        width: 38px;
+        height: 38px;
+      }
+
+      .chain-node.base {
+        width: auto;
+      }
+
+      .tier-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .tier-card {
+        min-height: 258px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        width: min(100% - 28px, 620px);
+        padding-top: 20px;
+      }
+
+      .topbar {
+        margin-bottom: 17px;
+      }
+
+      .save-state {
+        display: none;
+      }
+
+      .hero {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 26px;
+        padding: 27px 24px 24px;
+        border-radius: 21px;
+      }
+
+      .points {
+        font-size: clamp(36px, 10vw, 56px);
+      }
+
+      .chain {
+        width: 100%;
+        padding: 20px 0 0;
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+        border-left: 0;
+      }
+
+      .chain-row {
+        gap: 6px;
+      }
+
+      .chain-node {
+        width: 38px;
+        height: 38px;
+      }
+
+      .chain-note {
+        margin-top: 12px;
+      }
+
+      .tower {
+        margin-top: 22px;
+      }
+
+      .section-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .price-rule {
+        padding-bottom: 0;
+      }
+
+      .tier-grid {
+        gap: 11px;
+      }
+
+      .tier-card {
+        min-height: 258px;
+        padding: 16px;
+        border-radius: 16px;
+      }
+
+      .amount {
+        font-size: 29px;
+      }
+
+      .tier-card:hover {
+        transform: none;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .app {
+        width: calc(100% - 22px);
+      }
+
+      .brand-copy p {
+        display: none;
+      }
+
+      .brand-mark {
+        width: 35px;
+        height: 35px;
+      }
+
+      .brand-copy h1 {
+        font-size: 15px;
+      }
+
+      .reset-button {
+        padding: 8px 10px;
+        font-size: 10px;
+      }
+
+      .hero {
+        padding: 24px 18px 21px;
+      }
+
+      .hero-stats {
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .stat-divider {
+        display: none;
+      }
+
+      .chain-row {
+        justify-content: space-between;
+        gap: 3px;
+      }
+
+      .chain-node {
+        width: 34px;
+        height: 34px;
+        font-size: 9px;
+        border-radius: 9px;
+      }
+
+      .chain-node.base {
+        width: auto;
+        min-width: 44px;
+        padding: 0 8px;
+      }
+
+      .chain-arrow {
+        font-size: 9px;
+      }
+
+      .tier-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .tier-card {
+        min-height: 236px;
+      }
+
+      .amount {
+        font-size: 32px;
+      }
+
+      .footer {
+        gap: 7px;
+        font-size: 8px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <h1>维度回廊</h1>
+          <p>DIMENSIONAL CASCADE</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="save-state" id="save-state" title="进度保存在浏览器本地">
+          <span class="save-dot"></span>
+          <span id="save-label">自动保存</span>
+        </div>
+        <button class="reset-button" id="reset-button" type="button">重置进度</button>
+      </div>
+    </header>
+
+    <section class="hero" aria-labelledby="resource-title">
+      <div class="hero-content">
+        <div class="eyebrow" id="resource-title">
+          <span class="eyebrow-mark" aria-hidden="true"></span>
+          基础资源 · 维度 0
+        </div>
+        <div class="points-row">
+          <span class="points" id="points">1.00e1</span>
+          <span class="points-unit">资源点</span>
+        </div>
+        <div class="hero-stats">
+          <span class="live-stat">
+            <i aria-hidden="true"></i>
+            基础产出 <strong id="base-rate">+0.00e0 /秒</strong>
+          </span>
+          <span class="stat-divider" aria-hidden="true"></span>
+          <span class="live-stat">已购维度 <strong id="total-owned">0.00e0</strong></span>
+        </div>
+        <p class="hint" id="hint">先购买一个维度 1，启动你的第一条产线。</p>
+      </div>
+
+      <div class="chain" aria-label="生产链：维度 4 流向维度 3，依次流向资源点">
+        <div class="chain-head">
+          <span>生产链</span>
+          <span class="chain-sub">实时 / 结算</span>
+        </div>
+        <div class="chain-row" aria-hidden="true">
+          <span class="chain-node tier-4" data-chain="4" title="维度 4">D4</span>
+          <span class="chain-arrow">→</span>
+          <span class="chain-node tier-3" data-chain="3" title="维度 3">D3</span>
+          <span class="chain-arrow">→</span>
+          <span class="chain-node tier-2" data-chain="2" title="维度 2">D2</span>
+          <span class="chain-arrow">→</span>
+          <span class="chain-node tier-1" data-chain="1" title="维度 1">D1</span>
+          <span class="chain-arrow">→</span>
+          <span class="chain-node base" title="资源点">资源点</span>
+        </div>
+        <p class="chain-note">高维资源逐级注入低维，最终转化为资源点。</p>
+      </div>
+    </section>
+
+    <section class="tower" aria-labelledby="tower-title">
+      <div class="section-head">
+        <div>
+          <h2 id="tower-title">维度阵列</h2>
+          <p>购买维度以扩大持有量；每次购买还会让该维度的产出翻倍。</p>
+        </div>
+        <div class="price-rule">购买使产出翻倍；价格按该维度的基数乘算</div>
+      </div>
+      <div class="tier-grid" id="tier-grid"></div>
+    </section>
+
+    <footer class="footer">
+      <span>所有购买消耗资源点</span>
+      <span class="footer-dot" aria-hidden="true"></span>
+      <span>生产链持续结算</span>
+      <span class="footer-dot" aria-hidden="true"></span>
+      <span>进度自动保存在本地</span>
+    </footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    const TIER_COUNT = 4;
+    const INITIAL_POINTS = 10;
+    const PRICE_BASE = 10;
+    const TICK_MS = 100;
+    const SAVE_KEY = "dimensional-cascade-save-v1";
+    const SAVE_INTERVAL = 5;
+
+    const TIER_META = [
+      { id: 1, target: "资源点" },
+      { id: 2, target: "维度 1" },
+      { id: 3, target: "维度 2" },
+      { id: 4, target: "维度 3" }
+    ];
+
+    const grid = document.getElementById("tier-grid");
+    const pointsEl = document.getElementById("points");
+    const baseRateEl = document.getElementById("base-rate");
+    const totalOwnedEl = document.getElementById("total-owned");
+    const hintEl = document.getElementById("hint");
+    const saveStateEl = document.getElementById("save-state");
+    const saveLabelEl = document.getElementById("save-label");
+    const resetButton = document.getElementById("reset-button");
+    const chainNodes = Array.from(document.querySelectorAll("[data-chain]"));
+
+    let state = loadState();
+    let saveAccumulator = 0;
+    let lastTick = performance.now();
+    let lastHint = "";
+
+    function freshState() {
+      return {
+        points: INITIAL_POINTS,
+        tiers: Array.from({ length: TIER_COUNT }, () => ({ amount: 0, owned: 0 }))
+      };
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return freshState();
+
+        const saved = JSON.parse(raw);
+        if (!saved || !Array.isArray(saved.tiers) || saved.tiers.length !== TIER_COUNT) {
+          return freshState();
+        }
+
+        const next = freshState();
+        const points = Number(saved.points);
+        if (Number.isFinite(points) && points >= 0) next.points = points;
+
+        for (let i = 0; i < TIER_COUNT; i += 1) {
+          const tier = saved.tiers[i] || {};
+          const amount = Number(tier.amount);
+          const owned = Number(tier.owned);
+          if (Number.isFinite(amount) && amount >= 0) next.tiers[i].amount = amount;
+          if (Number.isFinite(owned) && owned >= 0) next.tiers[i].owned = Math.floor(owned);
+        }
+
+        return next;
+      } catch (error) {
+        return freshState();
+      }
+    }
+
+    function saveGame(showFeedback) {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        saveStateEl.classList.remove("is-error");
+        saveLabelEl.textContent = "自动保存";
+        if (showFeedback) {
+          saveStateEl.animate(
+            [
+              { opacity: 0.45, transform: "translateY(1px)" },
+              { opacity: 1, transform: "translateY(0)" }
+            ],
+            { duration: 220, easing: "ease-out" }
+          );
+        }
+      } catch (error) {
+        saveStateEl.classList.add("is-error");
+        saveLabelEl.textContent = "未存档";
+      }
+    }
+
+    function formatValue(value) {
+      if (value === Infinity) return "∞";
+      if (!Number.isFinite(value)) return "0.00e0";
+      return value.toExponential(2).replace("e+", "e");
+    }
+
+    function formatCost(value) {
+      return formatValue(value);
+    }
+
+    function tierBasePrice(tierIndex) {
+      return Math.pow(PRICE_BASE, tierIndex + 1);
+    }
+
+    function tierMultiplier(tierIndex) {
+      return Math.pow(2, state.tiers[tierIndex].owned);
+    }
+
+    function tierOutput(tierIndex) {
+      return state.tiers[tierIndex].amount * tierMultiplier(tierIndex);
+    }
+
+    function tierCost(tierIndex) {
+      const growth = tierBasePrice(tierIndex);
+      return growth * Math.pow(growth, state.tiers[tierIndex].owned);
+    }
+
+    function buildCards() {
+      grid.innerHTML = TIER_META.map((meta) => {
+        const basePrice = tierBasePrice(meta.id - 1);
+        const basePriceLabel = formatCost(basePrice);
+        return `
+          <article class="tier-card tier-${meta.id}" data-card="${meta.id}">
+            <div class="card-top">
+              <span class="card-kicker">DIMENSION ${String(meta.id).padStart(2, "0")}</span>
+              <span class="owned-badge">已购 <span data-owned>0.00e0</span></span>
+            </div>
+            <h3>维度 ${meta.id}</h3>
+            <div class="amount-row">
+              <span class="amount" data-amount>0.00e0</span>
+              <span class="amount-label">持有</span>
+            </div>
+            <div class="output-row">
+              <span class="output-main">
+                <span class="output-arrow" aria-hidden="true">↓</span>
+                <span>每秒 <strong data-rate>+0.00e0</strong> → ${meta.target}</span>
+              </span>
+              <span class="multiplier" title="产出倍率：每次购买使该维度产出翻倍">
+                <span class="multiplier-label">倍率</span>
+                <span class="multiplier-value">×<span data-multiplier>1.00e0</span></span>
+              </span>
+            </div>
+            <button class="buy-button" type="button" data-buy="${meta.id}">
+              <span>购买</span>
+              <span class="buy-price"><span class="diamond" aria-hidden="true">◆</span><span data-cost>${basePriceLabel}</span></span>
+            </button>
+            <p class="price-note">购买使产出翻倍 · 价格 ×${basePriceLabel}/次</p>
+          </article>
+        `;
+      }).join("");
+    }
+
+    buildCards();
+
+    const cardEls = TIER_META.map((meta) => {
+      const card = grid.querySelector(`[data-card="${meta.id}"]`);
+      return {
+        card,
+        amount: card.querySelector("[data-amount]"),
+        owned: card.querySelector("[data-owned]"),
+        rate: card.querySelector("[data-rate]"),
+        multiplier: card.querySelector("[data-multiplier]"),
+        cost: card.querySelector("[data-cost]"),
+        button: card.querySelector("[data-buy]")
+      };
+    });
+
+    function simulate(delta) {
+      for (let i = TIER_COUNT - 1; i >= 0; i -= 1) {
+        const produced = tierOutput(i) * delta;
+        if (i === 0) {
+          state.points += produced;
+        } else {
+          state.tiers[i - 1].amount += produced;
+        }
+      }
+    }
+
+    function updateHint() {
+      let text;
+
+      if (state.tiers.every((tier) => tier.owned === 0)) {
+        text = "先购买一个维度 1，启动你的第一条产线。";
+      } else {
+        const lockedIndex = state.tiers.findIndex((tier) => tier.owned === 0);
+        if (lockedIndex !== -1) {
+          text = `下一个目标：维度 ${lockedIndex + 1}（${formatCost(tierCost(lockedIndex))} 资源点）。`;
+        } else {
+          text = "四维产线已贯通。现在，看看这串数字能跑多远。";
+        }
+      }
+
+      if (text !== lastHint) {
+        hintEl.textContent = text;
+        lastHint = text;
+      }
+    }
+
+    function render() {
+      pointsEl.textContent = formatValue(state.points);
+      baseRateEl.textContent = "+" + formatValue(tierOutput(0)) + " /秒";
+      totalOwnedEl.textContent = formatValue(
+        state.tiers.reduce((total, tier) => total + tier.owned, 0)
+      );
+
+      for (let i = 0; i < TIER_COUNT; i += 1) {
+        const tier = state.tiers[i];
+        const view = cardEls[i];
+        const cost = tierCost(i);
+        const output = tierOutput(i);
+        const multiplier = tierMultiplier(i);
+
+        view.amount.textContent = formatValue(tier.amount);
+        view.owned.textContent = formatValue(tier.owned);
+        view.rate.textContent = "+" + formatValue(output);
+        view.multiplier.textContent = formatValue(multiplier);
+        view.cost.textContent = formatCost(cost);
+        view.button.disabled = state.points + 1e-9 < cost;
+        view.button.title = view.button.disabled
+          ? `需要 ${formatCost(cost)} 资源点`
+          : `购买一个维度 ${i + 1}`;
+      }
+
+      for (const node of chainNodes) {
+        const tierIndex = Number(node.dataset.chain) - 1;
+        node.classList.toggle("is-active", state.tiers[tierIndex].amount > 0);
+      }
+
+      updateHint();
+    }
+
+    function buyTier(tierIndex) {
+      const cost = tierCost(tierIndex);
+      if (state.points + 1e-9 < cost) return;
+
+      state.points -= cost;
+      state.tiers[tierIndex].owned += 1;
+      state.tiers[tierIndex].amount += 1;
+
+      const card = cardEls[tierIndex].card;
+      card.classList.remove("bought");
+      void card.offsetWidth;
+      card.classList.add("bought");
+
+      render();
+      saveGame(false);
+    }
+
+    grid.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-buy]");
+      if (!button) return;
+      buyTier(Number(button.dataset.buy) - 1);
+    });
+
+    grid.addEventListener("animationend", (event) => {
+      if (event.animationName === "bought") {
+        const card = event.target.closest(".tier-card");
+        if (card) card.classList.remove("bought");
+      }
+    });
+
+    resetButton.addEventListener("click", () => {
+      if (!window.confirm("确定要清空当前进度，从 10 资源点重新开始吗？")) return;
+      state = freshState();
+      saveAccumulator = 0;
+      lastTick = performance.now();
+      render();
+      saveGame(false);
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      lastTick = performance.now();
+    });
+
+    render();
+
+    setInterval(() => {
+      const now = performance.now();
+      const delta = Math.min(Math.max((now - lastTick) / 1000, 0), 5);
+      lastTick = now;
+
+      if (delta > 0) {
+        simulate(delta);
+        saveAccumulator += delta;
+      }
+
+      render();
+
+      if (saveAccumulator >= SAVE_INTERVAL) {
+        saveAccumulator = 0;
+        saveGame(false);
+      }
+    }, TICK_MS);
+  </script>
+</body>
+</html>
